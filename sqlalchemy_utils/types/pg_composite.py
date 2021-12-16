@@ -158,10 +158,9 @@ def _compile_pgelem(expr, compiler, **kw):
 
 class CompositeArray(ARRAY):
     def _proc_array(self, arr, itemproc, dim, collection):
-        if dim is None:
-            if isinstance(self.item_type, CompositeType):
-                arr = [itemproc(a) for a in arr]
-                return arr
+        if dim is None and isinstance(self.item_type, CompositeType):
+            arr = [itemproc(a) for a in arr]
+            return arr
         return ARRAY._proc_array(self, arr, itemproc, dim, collection)
 
 
@@ -248,14 +247,15 @@ class CompositeType(UserDefinedType, SchemaType):
             if value is None:
                 return None
             cls = value.__class__
-            kwargs = {}
-            for column in self.columns:
-                if isinstance(column.type, TypeDecorator):
-                    kwargs[column.name] = column.type.process_result_value(
-                        getattr(value, column.name), dialect
-                    )
-                else:
-                    kwargs[column.name] = getattr(value, column.name)
+            kwargs = {
+                column.name: column.type.process_result_value(
+                    getattr(value, column.name), dialect
+                )
+                if isinstance(column.type, TypeDecorator)
+                else getattr(value, column.name)
+                for column in self.columns
+            }
+
             return cls(**kwargs)
         return process
 

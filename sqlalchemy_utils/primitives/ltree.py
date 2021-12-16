@@ -180,7 +180,7 @@ class Ltree(object):
             )):
                 if index == 0:
                     return None
-                return Ltree('.'.join(parts[0:index]))
+                return Ltree('.'.join(parts[:index]))
 
     def __add__(self, other):
         return Ltree(self.path + '.' + Ltree(other).path)

@@ -234,9 +234,10 @@ class PropertyObserver(object):
     def gather_paths(self):
         for class_, generators in self.generator_registry.items():
             for callback in generators:
-                full_paths = []
-                for call_path in callback.__observes__:
-                    full_paths.append(AttrPath(class_, call_path))
+                full_paths = [
+                    AttrPath(class_, call_path)
+                    for call_path in callback.__observes__
+                ]
 
                 for path in full_paths:
                     self.callback_map[class_].append(

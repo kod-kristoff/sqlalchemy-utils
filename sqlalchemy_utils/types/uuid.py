@@ -51,10 +51,9 @@ class UUIDType(ScalarCoercible, types.TypeDecorator):
             # Use the native UNIQUEIDENTIFIER type.
             return dialect.type_descriptor(mssql.UNIQUEIDENTIFIER())
 
-        else:
-            # Fallback to either a BINARY or a CHAR.
-            kind = self.impl if self.binary else types.CHAR(32)
-            return dialect.type_descriptor(kind)
+        # Fallback to either a BINARY or a CHAR.
+        kind = self.impl if self.binary else types.CHAR(32)
+        return dialect.type_descriptor(kind)
 
     @staticmethod
     def _coerce(value):
