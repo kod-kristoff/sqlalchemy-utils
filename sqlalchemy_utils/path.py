@@ -8,10 +8,7 @@ from .utils import str_coercible
 @str_coercible
 class Path(object):
     def __init__(self, path, separator='.'):
-        if isinstance(path, Path):
-            self.path = path.path
-        else:
-            self.path = path
+        self.path = path.path if isinstance(path, Path) else path
         self.separator = separator
 
     @property
@@ -19,8 +16,7 @@ class Path(object):
         return self.path.split(self.separator)
 
     def __iter__(self):
-        for part in self.parts:
-            yield part
+        yield from self.parts
 
     def __len__(self):
         return len(self.parts)
@@ -72,8 +68,7 @@ class AttrPath(object):
             self.parts.append(last_attr)
 
     def __iter__(self):
-        for part in self.parts:
-            yield part
+        yield from self.parts
 
     def __invert__(self):
         def get_backref(part):
@@ -123,10 +118,7 @@ class AttrPath(object):
     def __getitem__(self, slice):
         result = self.parts[slice]
         if isinstance(result, list) and result:
-            if result[0] is self.parts[0]:
-                class_ = self.class_
-            else:
-                class_ = result[0].parent.class_
+            class_ = self.class_ if result[0] is self.parts[0] else result[0].parent.class_
             return self.__class__(
                 class_,
                 self.path[slice]

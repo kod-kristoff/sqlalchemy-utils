@@ -74,10 +74,8 @@ def get_class_by_table(base, table, data=None):
     :param data: Data row to determine the class in polymorphic scenarios
     :return: Declarative class or None.
     """
-    found_classes = set(
-        c for c in _get_class_registry(base).values()
-        if hasattr(c, '__table__') and c.__table__ is table
-    )
+    found_classes = {c for c in _get_class_registry(base).values()
+            if hasattr(c, '__table__') and c.__table__ is table}
     if len(found_classes) > 1:
         if not data:
             raise ValueError(
@@ -87,20 +85,21 @@ def get_class_by_table(base, table, data=None):
                     table.name
                 )
             )
-        else:
-            for cls in found_classes:
-                mapper = sa.inspect(cls)
-                polymorphic_on = mapper.polymorphic_on.name
-                if polymorphic_on in data:
-                    if data[polymorphic_on] == mapper.polymorphic_identity:
-                        return cls
-            raise ValueError(
-                "Multiple declarative classes found for table '{0}'. Given "
-                "data row does not match any polymorphic identity of the "
-                "found classes.".format(
-                    table.name
-                )
+        for cls in found_classes:
+            mapper = sa.inspect(cls)
+            polymorphic_on = mapper.polymorphic_on.name
+            if (
+                polymorphic_on in data
+                and data[polymorphic_on] == mapper.polymorphic_identity
+            ):
+                return cls
+        raise ValueError(
+            "Multiple declarative classes found for table '{0}'. Given "
+            "data row does not match any polymorphic identity of the "
+            "found classes.".format(
+                table.name
             )
+        )
     elif found_classes:
         return found_classes.pop()
     return None
@@ -427,11 +426,11 @@ def get_tables(mixed):
     mapper = get_mapper(mixed)
 
     polymorphic_mappers = get_polymorphic_mappers(mapper)
-    if polymorphic_mappers:
-        tables = sum((m.tables for m in polymorphic_mappers), [])
-    else:
-        tables = mapper.tables
-    return tables
+    return (
+        sum((m.tables for m in polymorphic_mappers), [])
+        if polymorphic_mappers
+        else mapper.tables
+    )
 
 
 def get_columns(mixed):
@@ -524,10 +523,7 @@ def quote(mixed, ident):
     :param mixed: SQLAlchemy Session / Connection / Engine / Dialect object.
     :param ident: identifier to conditionally quote
     """
-    if isinstance(mixed, Dialect):
-        dialect = mixed
-    else:
-        dialect = get_bind(mixed).dialect
+    dialect = mixed if isinstance(mixed, Dialect) else get_bind(mixed).dialect
     return dialect.preparer(dialect).quote(ident)
 
 
@@ -556,16 +552,15 @@ def get_descriptor(entity, attr):
                 else None
             )
             if isinstance(prop, ColumnProperty):
-                if isinstance(entity, sa.orm.util.AliasedClass):
-                    for c in mapper.selectable.c:
-                        if c.key == attr:
-                            return c
-                else:
+                if not isinstance(entity, sa.orm.util.AliasedClass):
                     # If the property belongs to a class that uses
                     # polymorphic inheritance we have to take into account
                     # situations where the attribute exists in child class
                     # but not in parent class.
                     return getattr(prop.parent.class_, attr)
+                for c in mapper.selectable.c:
+                    if c.key == attr:
+                        return c
             else:
                 # Handle synonyms, relationship properties and hybrid
                 # properties
@@ -652,11 +647,11 @@ def get_hybrid_properties(model):
 
     :param model: SQLAlchemy declarative model or mapper
     """
-    return dict(
-        (key, prop)
+    return {
+        key: prop
         for key, prop in get_mapper(model).all_orm_descriptors.items()
         if isinstance(prop, hybrid_property)
-    )
+    }
 
 
 def get_declarative_base(model):
@@ -711,9 +706,8 @@ def getdotattr(obj_or_class, dot_path, condition=None):
         if condition is not None:
             if is_sequence(last):
                 last = [v for v in last if condition(v)]
-            else:
-                if not condition(last):
-                    return None
+            elif not condition(last):
+                return None
 
     return last
 
@@ -897,7 +891,7 @@ def naturally_equivalent(obj, obj2):
         if column.primary_key:
             continue
 
-        if not (getattr(obj, column_key) == getattr(obj2, column_key)):
+        if getattr(obj, column_key) != getattr(obj2, column_key):
             return False
     return True
 

@@ -16,9 +16,8 @@ class PendulumDate(PendulumDateTime):
             )
 
     def _coerce(self, impl, value):
-        if value:
-            if not isinstance(value, pendulum.Date):
-                value = super(PendulumDate, self)._coerce(impl, value).date()
+        if value and not isinstance(value, pendulum.Date):
+            value = super(PendulumDate, self)._coerce(impl, value).date()
         return value
 
     def process_result_value(self, impl, value, dialect):
